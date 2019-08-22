@@ -72,7 +72,7 @@ fi
 
 echo "flag ---0--- "${TOOLS_CONFIG+x}
 echo "flag ---1--- "${BASH_SOURCE[0]:+x}
-export -n TOOLS_CONFIG
+#export -n TOOLS_CONFIG
 
 if [[  ${TOOLS_CONFIG+x} == "" && ${BASH_SOURCE[0]:+x} != "" && -f $(dirname ${BASH_SOURCE[0]})/toolsconfig.txt ]]; then
     export TOOLS_CONFIG=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/toolsconfig.txt
@@ -80,6 +80,8 @@ if [[  ${TOOLS_CONFIG+x} == "" && ${BASH_SOURCE[0]:+x} != "" && -f $(dirname ${B
     echo "flag ---00--- "${TOOLS_CONFIG}
     echo "flag ---11--- "${BASH_SOURCE[0]}
 fi
+
+export TOOLS_CONFIG=toolsconfig.txt
 
 echo "flag ---22--- "${TOOLS_CONFIG}
 
@@ -1729,7 +1731,7 @@ function g()
         while [[ $# -gt 0 ]]; do
             if [[ $1 != "--" ]]; then
                 sshoption=("${sshoption[@]}" "$1")
-                echo sshoption $sshoption
+                echo g: sshoption $sshoption
                 shift
             else
                 shift
@@ -1741,7 +1743,7 @@ function g()
     local svr=$1    
     local nextsvr=
     if [[ $1 =~ .*/.* ]]; then
-        echo "$1 =~ .*/.* "
+        echo g: "$1 =~ .*/.* "
         svr=${1%%/*}
         nextsvr=${1#*/}
     fi
@@ -1749,37 +1751,42 @@ function g()
     
     local user=
     if [[ $svr =~ .*@@.* ]]; then
-        echo  g 0000000
+        echo  g: 00000000
         user=${svr##*@@}
         svr=${svr%@@*}
     elif [[ $svr =~ .*@.* ]]; then
-        echo  g 0000000
+        echo  g: 0000000
         user=${svr%%@*}
         svr=${svr#*@}
     fi
 
-    echo g user:$user svr:$svr
+    echo g: user:$user svr:$svr
     
     
     local formal_args=()
     if [[ $nextsvr != "" ]]; then
-        echo g 222222222
+        echo g: 222222222
         formal_args=("$svr")
     else
-        echo g 33333333 
+        echo g: 33333333 
         formal_args=("$svr" "$@")
     fi
     
     if [[ $user == "" ]]; then
         user=$(getconfig_item_rec sshuser '' "${formal_args[@]}")
+        echo g: user0:$user
     fi
     if [[ $user == "" ]]; then
         user=$SSH_DEFAULT_USER
+        echo g: user1:$user
     fi
 
     local ips=($(getip "${formal_args[@]}"))
     local goenv=$(getconfig_item setenv '' "${formal_args[@]}")
     local sshoption_from_cfg=$(getconfig_item sshoption '' "${formal_args[@]}")
+
+    echo ==g: ips:$ips goenv:$goenv sshoption_from_cfg:$sshoption_from_cfg
+
     if [[ $goenv == "" ]]; then
         goenv=$SELECTED_ENV
     fi
