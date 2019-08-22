@@ -1,0 +1,200 @@
+# 配置说明：
+# 机器别名或执行环境别名配置，之后双横杠代表在这个别名下生效的配置（别名可以多个，|分隔）
+
+# setip 获取代表的ip，可以多个
+# setpath 进入别名机器进入的目录（对g指令生效代表进入机器马上进入的目录，  对c指令生效代表可以作为参数的目录）
+# setenv 进入的是哪个环境，会继承接下来进入的机器
+# sshuser SSH用户
+# sshoption SSH配置
+# setcmd 进入机器马上执行的命令
+
+
+# MC内网环境
+:env-mcinner:
+	--setcmd export MFW_REGISTRY_DB_IP="192.168.60.225"
+	--setcmd export MFW_REGISTRY_DB_PORT=3306
+	--setcmd export MFW_APP_NAME=MLBC
+	--setcmd export MFW_GLOBALAPP_NAME=MLBC
+	--setcmd export MFW_DIVISION=mlbc.zone
+	--setcmd export SSH_DEFAULT_USER=mlbc
+	--setcmd export SSH_PWD='mlbc2019'
+	--setcmd export SSH_OPT=
+	--setcmd export SCP_OPT=
+	--setcmd export MYSQL_USER=mlbc
+	--setcmd export MYSQL_PWD=mlbc2019
+	--setcmd export rel_user=mlbc
+    --setcmd export rel_passwd=mlbc2019
+    --setcmd export cc_port=22
+
+# MC阿里云环境
+:env-mcali:
+	--setcmd export MFW_REGISTRY_DB_IP="172.19.179.230"
+	--setcmd export MFW_REGISTRY_DB_PORT=3306
+	--setcmd export MFW_APP_NAME=MLBC
+	--setcmd export MFW_GLOBALAPP_NAME=MLBC
+	--setcmd export MFW_DIVISION=mlbc.zone
+	--setcmd export SSH_DEFAULT_USER=mlbc
+	--setcmd export SSH_PWD='mlbc2019'
+	--setcmd export SSH_OPT=
+	--setcmd export SCP_OPT=
+	--setcmd export MYSQL_USER=mlbc
+	--setcmd export MYSQL_PWD=mlbc2019
+	--setcmd export rel_user=mlbc
+    --setcmd export rel_passwd=mlbc2019
+    --setcmd export cc_port=22
+
+# MC正式环境
+# 新CC, 3332端口也可以, 有代理
+:env-mc:
+	--setcmd export MFW_REGISTRY_DB_IP="10.173.137.68"
+	--setcmd export MFW_REGISTRY_DB_PORT=3306
+	--setcmd export MFW_APP_NAME=MLBC
+	--setcmd export MFW_GLOBALAPP_NAME=MLBC
+	--setcmd export MFW_DIVISION=mlbc.zone
+	--setcmd export SSH_DEFAULT_USER=mlbc
+	--setcmd export SSH_PWD='mlbc2019'
+	--setcmd export SSH_OPT=
+	--setcmd export SCP_OPT=
+	--setcmd export MYSQL_USER=mlbc
+	--setcmd export MYSQL_PWD=mlbc2019
+	--setcmd export rel_user=mlbc
+    --setcmd export rel_passwd=mlbc2019
+    --setcmd export cc_port=22
+
+\.
+	--setip $(showip in)
+	
+-
+    --setpath $(pwd | awk '{p=$1; q=gensub(/^\/data\/applog\//, "/data/app/", "g", p); if (p==q) q=gensub(/^\/data\/app\//, "/data/applog/", "g", p); print q}')
+
+#内网
+in
+    --setip 192.168.60.225
+    --sshuser mlbc
+    --setenv mcinner
+    --setpath /data/tools/script
+
+#CC机
+ali
+    --setip 47.103.102.47
+    --sshuser mlbc
+    --setenv mcali
+    --setpath /data/tools/script
+
+#CC机
+cc
+    --setip 119.81.5.93
+    --sshuser mlbc
+    --setenv mc
+    --setpath /data/tools/script
+
+#GM指令机器
+gm
+	--setip[mc] 10.66.196.140
+	--setpath[mc] /data/www/gm.mlbc.moonton.com
+
+#CDN源站
+cdn
+	--setip[mc] 10.66.196.153
+	--setpath[mc] /data/cdnsrc/mlbc_cdn
+
+# mfw DB机器
+mfwdb
+	--setip[mc] 10.173.137.68
+
+# 全局DB机器
+globaldb
+	--setip[mc] 10.173.137.68
+
+# 全局DB机器
+bidb
+	--setip[mc] 10.66.196.169
+    
+
+# 蓝鲸机器
+bk
+	--setip[ml] 10.116.207.214 10.116.207.208 10.116.207.191 10.116.207.224 10.116.207.228 10.117.16.167
+    --sshuser[ml] root
+    --setpath[ml] /data/install
+    --setcmd[ml] source /data/install/utils.fc
+
+# influxdb统计机器
+influx
+    --setip[ml] 10.116.207.254
+
+
+
+
+# 各种全局Server的访问，进入日志目录, 参数： app division
+[[:alnum:]]+Server
+[[:alnum:]]+Server [[:alnum:]]+\.[[:alnum:]]+\.[[:alnum:]]+
+	--setip $(get_server_ip $1 $2)
+	--setpath /data/applog/$MFW_APP_NAME/$2/$1
+
+# 各种全局Server的访问，进入bin目录
+[[:alnum:]]+Server  bin
+[[:alnum:]]+Server [[:alnum:]]+\.[[:alnum:]]+\.[[:alnum:]]+ bin
+	--setip $(get_server_ip $1 $2)
+	--setpath /data/app/$MFW_APP_NAME/$2/$1
+	--setcmd ls -l
+
+	
+	
+# Game分区的访问，z开头
+z[[:digit:]]+|[[:digit:]]+
+z[[:digit:]]+|[[:digit:]]+ log|gamelog
+	--setip $(get_server_ip GameServer $MFW_DIVISION.${1#z})
+	--setpath /data/applog/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/GameServer
+	
+z[[:digit:]]+|[[:digit:]]+ connlog
+	--setpath /data/applog/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/ConnServer
+
+z[[:digit:]]+|[[:digit:]]+ bin|gamebin
+	--setpath /data/app/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/GameServer
+	--setcmd ls -l
+	
+z[[:digit:]]+|[[:digit:]]+ conn|connbin
+	--setpath /data/app/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/ConnServer
+	--setcmd ls -l
+
+z[[:digit:]]+|[[:digit:]]+ rlog|rgamelog
+	--setpath /data/remote_applog/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/GameServer
+	
+z[[:digit:]]+|[[:digit:]]+ rconnlog
+	--setpath /data/remote_applog/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/ConnServer
+
+
+# Battle分区的访问，b开头
+b[[:digit:]]+|[[:digit:]]+
+b[[:digit:]]+|[[:digit:]]+ log
+	--setip[mc] $(get_server_ip BattleServer mlbc.battle.${1#b})
+	--setpath[mc] /data/applog/$MFW_APP_NAME/mlbc.battle.${1#b}/BattleServer
+
+b[[:digit:]]+|[[:digit:]]+ bin
+	--setpath[mc] /data/app/$MFW_APP_NAME/mlbc.battle.${1#b}/BattleServer
+	--setcmd ls -l
+
+	
+# Match分区的访问，m开头
+m[[:digit:]]+|[[:digit:]]+
+m[[:digit:]]+|[[:digit:]]+ log
+	--setip[mc] $(get_server_ip MatchServer mlbc.match.${1#m})
+	--setpath[mc] /data/applog/$MFW_APP_NAME/mlbc.match.${1#m}/MatchServer
+
+m[[:digit:]]+|[[:digit:]]+ bin
+	--setpath[mc] /data/app/$MFW_APP_NAME/mlbc.match.${1#m}/MatchServer
+	--setcmd ls -l
+
+
+	
+# 大区日志机器
+log[[:digit:]]+
+	--setip[mc] $(get_server_ip mfw.mfwlog-mc${1#log})
+	--setpath /data/remote_applog/$MFW_APP_NAME
+	--setcmd ls -l
+
+#全局日志机器
+logcommon
+	--setip[mc] $(get_server_ip mfw.mfwlog-common)
+	--setpath /data/remote_applog/$MFW_APP_NAME
+	--setcmd ls -l
