@@ -2,6 +2,9 @@
 
 shopt -s extglob
 
+#set -x
+#set -n
+
 alias ..='cd ..'
 alias -- -='cd -'
 alias grep='grep --color'
@@ -81,7 +84,7 @@ if [[  ${TOOLS_CONFIG+x} == "" && ${BASH_SOURCE[0]:+x} != "" && -f $(dirname ${B
     echo "flag ---11--- "${BASH_SOURCE[0]}
 fi
 
-export TOOLS_CONFIG=toolsconfig.txt
+export TOOLS_CONFIG=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/toolsconfig.txt
 
 echo "flag ---22--- "${TOOLS_CONFIG}
 
@@ -1265,12 +1268,14 @@ function getiptype()
 
 function showip()
 {
+    echo =0=showip:$@ >&2
     if [[ $1 == "-h" ]]; then
         echo "Usage: $FUNCNAME [in|out|one|all|interface]" >&2
         return 1
     fi
     if [[ $1 == "one" ]]; then
         local ip=$(showip in | head -1)
+        echo ==showip:$ip >&2
         if [[ $ip == "" ]]; then
             ip=$(showip out | head -1)
         fi
@@ -1279,6 +1284,7 @@ function showip()
     fi
     
     local ifs=$(/sbin/ip -4 -o addr show scope global | sed 's|[0-9]*: \([^ \t]*\).*inet \([^/]*\)/.*|\1 \2|g; /^docker/d' | sort -V)
+    echo ==ifs:$ifs >&2
     local ips=$(echo "$ifs" | awk '{print $2}')
     if [[ $# -eq 0 ]]; then
         echo "$ips"
@@ -1406,8 +1412,8 @@ function mysqlex()
 
 function getconfig()
 {
-    echo getconfig $funcname: @:$@ >&2
-    echo getconfig $SELECTED_ENV
+    echo getconfig @:$@ >&2
+    echo getconfig evn $SELECTED_ENV >&2
     echo "$@" | awk -venv="$SELECTED_ENV" '
     ARGIND==1 {
         count = NF;
@@ -2175,3 +2181,5 @@ function tstable() {
 function tscolumn() {
     tstable $'\t' | column -t
 }
+
+getconfig "in"
