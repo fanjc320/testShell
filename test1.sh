@@ -1413,43 +1413,54 @@ function mysqlex()
 function getconfig()
 {
     echo getconfig @:$@ >&2
-    echo getconfig evn $SELECTED_ENV >&2
+    echo getconfig env: $SELECTED_ENV >&2
     echo "$@" | awk -venv="$SELECTED_ENV" '
     ARGIND==1 {
         count = NF;
         matching = 0;
         find = 0;
         for (i = 1; i <= NF; ++i)
+        {
             param[i] = $i;
+            print "$FUNCNAME-------00 parami: "param[i] " count:"count
+        }
     }
     ARGIND==2 && $0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ {
         if ($0 !~ /^[[:space:]]*--/) {
+        print "getconfig ######11 $0:"$0
             if (!matching) {
                 if (find) {
+        print "getconfig -------12 >&2"
                     exit 0;
                 }
                 matching = 1;
                 find = 0;
+        print "getconfig -------121 >&2"
             }
             
             if (!find && NF == count) {
                 find = 1;
                 for (i = 1; i <= count; ++i) {
                     pat = "^("$i")$"
+        print "getconfig ######130 i:"i "$i:"$i  "parami:"param[i] "pat:"pat
                     if (!match(param[i], pat)) {
                         find = 0;
+        print "getconfig -------13 >&2"
                         break;
                     }
                 }
             }
         } else {
+        print "getconfig -------30"
             matching = 0;
             
             if (find) {
                 op = gensub(/^[[:space:]]*--/, "", "g", $1);
                 if (op ~ /^[a-zA-Z0-9_]+$/) {
+        print "getconfig -------31"
                     print gensub(/^[[:space:]]*--/, "", "g", $0);
                 } else if (match(op, "^[a-zA-Z0-9_]+\\["env"\\]$")) {
+        print "getconfig -------32"
                     print gensub(/^[[:space:]]*--([^[]+)[^[:space:]]+/, "\\1", "g", $0);
                 }
             }
