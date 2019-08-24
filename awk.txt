@@ -1,0 +1,1 @@
+echo "In" | awk 'ARGIND==1{print $0}ARGIND==2{print index2 $0}' -  <(get_toolsconfig_content) 

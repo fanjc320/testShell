@@ -2,9 +2,10 @@
 
 shopt -s extglob
 
-#set -x
+set -x
 #set -n
 
+:<<!
 alias ..='cd ..'
 alias -- -='cd -'
 alias grep='grep --color'
@@ -55,6 +56,7 @@ alias rlog='./cc_release_log.sh'
 alias u='./upload_cc_server.sh'
 alias uconfig='./upload_cc_config.sh'
 alias utool='./upload_cc_tools.sh'
+!
 
 export PS1='[\u@\h:\w]\$ '
 
@@ -1412,8 +1414,10 @@ function mysqlex()
 
 function getconfig()
 {
-    echo getconfig @:$@ >&2
-    echo getconfig env: $SELECTED_ENV >&2
+echo getconfig @:$@ >&2
+echo getconfig env: $SELECTED_ENV >&2
+    echo "$@" | awk '{print $0}' - <(get_toolsconfig_content)
+    echo "==================end===================="
     echo "$@" | awk -venv="$SELECTED_ENV" '
     ARGIND==1 {
         count = NF;
@@ -1427,7 +1431,8 @@ function getconfig()
     }
     ARGIND==2 && $0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ {
         if ($0 !~ /^[[:space:]]*--/) {
-        print "getconfig ######11 $0:"$0
+        print "getconfig ==========================######11 $0:"$0 
+        print "matching:"$matching "find:"$find
             if (!matching) {
                 if (find) {
         print "getconfig -------12 >&2"
@@ -2193,4 +2198,69 @@ function tscolumn() {
     tstable $'\t' | column -t
 }
 
-getconfig "in"
+#getconfig "in"
+
+function myconfig()
+{
+echo $FUNCNAME @:$@ >&2
+echo $FUNCNAME env: $SELECTED_ENV >&2
+    #echo "$@" | awk '{print $0}' - <(get_toolsconfig_content)
+    echo "$@" | awk -venv="$SELECTED_ENV" '
+    ARGIND==1 {
+        print "argind==1:"$0;
+        count = NF;
+        matching = 0;
+        find = 0;
+        for (i = 1; i <= NF; ++i)
+        {
+            param[i] = $i;
+            print "$FUNCNAME--000000-- parami: "param[i] " count:"count
+        }
+    }
+    ARGIND==2 && $0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ {
+        print "     $0:"$0 
+        print "matching:"matching "find:"find
+        if ($0 !~ /^[[:space:]]*--/) {
+            if (!matching) {
+                if (find) {
+        print "myconfig -------120 find"
+                    exit 0;
+                }
+                matching = 1;
+                find = 0;
+        print "myconfig -------121 not find"
+            }
+            
+            if (!find && NF == count) {
+                find = 1;
+                for (i = 1; i <= count; ++i) {
+                    pat = "^("$i")$"
+        print "myconfig ######130 i:"i "$i:"$i  "parami:"param[i] "pat:"pat
+                    if (!match(param[i], pat)) {
+                        find = 0;
+        print "myconfig ######131 not match"
+                        break;
+                    }
+                }
+            }
+        } else {
+        print "myconfig =======230"
+            matching = 0;
+            
+            if (find) {
+                op = gensub(/^[[:space:]]*--/, "", "g", $1);
+        print "myconfig =======230 op:"op
+                if (op ~ /^[a-zA-Z0-9_]+$/) {
+        print "myconfig =======231 find"
+                    print gensub(/^[[:space:]]*--/, "", "g", $0);
+                } else if (match(op, "^[a-zA-Z0-9_]+\\["env"\\]$")) {
+        print "myconfig =======232 match"
+                    print gensub(/^[[:space:]]*--([^[]+)[^[:space:]]+/, "\\1", "g", $0);
+                }
+            }
+        }
+    }
+    ' - <(get_toolsconfig_content)
+}
+
+myconfig "in"
