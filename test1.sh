@@ -2,7 +2,7 @@
 
 shopt -s extglob
 
-set -x
+set +x
 #set -n
 
 :<<!
@@ -102,7 +102,7 @@ if [[ ${BASH_SOURCE[0]:+x} != "" ]]; then
     }
     function get_toolsconfig_content()
     {
-        echo "$funcname=gettoolscontent=begin=called=====" >&2
+        #echo "$funcname=gettoolscontent=begin=called=====" >&2
         cat "$TOOLS_CONFIG" 2>/dev/null
         #echo "$funcname=gettoolscontent=end=called=====" >&2
     }
@@ -825,7 +825,7 @@ proc feedpasswd { user host {script ""} } {
         set password $expect_out(1,string);
     };
 
-    #puts "[exp_pid] rsp pwd $password from level [getenv TOOLSFUNC_LEVEL]";
+    puts "[exp_pid] rsp pwd $password from level [getenv TOOLSFUNC_LEVEL]";
     send -- "$password\n";
 };
 
@@ -1040,6 +1040,7 @@ EOF
 
 function shellex()
 {
+   echo "shellex all param:"$@ 
     if [[ $# -lt 1 ]]; then
         echo "Usage: $FUNCNAME host [command] [ssh options]" >&2
         echo "       set SSH_GETPWD=script for password provider" >&2
@@ -1414,10 +1415,6 @@ function mysqlex()
 
 function getconfig()
 {
-echo getconfig @:$@ >&2
-echo getconfig env: $SELECTED_ENV >&2
-    echo "$@" | awk '{print $0}' - <(get_toolsconfig_content)
-    echo "==================end===================="
     echo "$@" | awk -venv="$SELECTED_ENV" '
     ARGIND==1 {
         count = NF;
@@ -1474,7 +1471,37 @@ echo getconfig env: $SELECTED_ENV >&2
     ' - <(get_toolsconfig_content)
 }
 
-function getconfig_item()
+function getconfig_item() #根据in 找到mlbc
+{
+    echo "BEGIN==----=========" $FUNCNAME @:$@ >&2 #sshuser in
+    #printf getconfig_item param:$@
+    if [[ $# -lt 3 ]]; then
+        echo "Usage: getconfig_item type replace params..."
+        return 1
+    fi
+    
+    local type=$1
+    local replace=$2
+    shift 2
+    
+    echo $FUNCNAME after shift: @:$@ type:$type replace:$replace >&2
+    local temp=$(getconfig "$@")
+    #echo $FUNCNAME temp:${temp} >&2
+
+    echo "getconfig -------0000---:"$@ >&2
+    if [[ $replace == "" ]]; then
+        #local tmp= $(getconfig "$@" | awk -vtype="$type" '$1 == type {pat="^"type"[[:space:]]*";print 'pat' ;  print gensub(pat, "", 1)}') # pat ^sshuser[[:space:]]*
+        echo $FUNCNAME _ Tmp:$tmp >&2
+        echo $FUNCNAME __ $(getconfig  "$@" | awk -vtype="$type" '$1 == type {pat="^"type"[[:space:]]*"; print gensub(pat, "", 1)}') >&2 # mlbc
+        getconfig "$@" | awk -vtype="$type" '$1 == type {pat="^"type"[[:space:]]*"; print gensub(pat, "", 1)}'
+    else
+        local tmp=getconfig "$@" | awk -vtype="$type" -vreplace="$replace" '$1 == type {pat="^"type; print gensub(pat, replace, 1)}' 
+        echo $funcname tmp1 ${tmp} >&2
+        getconfig "$@" | awk -vtype="$type" -vreplace="$replace" '$1 == type {pat="^"type; print gensub(pat, replace, 1)}'
+    fi
+}
+
+function my_getconfig_item()
 {
     #printf getconfig_item param:$@
     if [[ $# -lt 3 ]]; then
@@ -1488,53 +1515,57 @@ function getconfig_item()
     shift 2
     
     echo $FUNCNAME after shift: $@ replace:$replace >&2
-    local temp=$(getconfig "$@")
-    echo $FUNCNAME temp1 ${temp} >&2
+    local temp=$(myconfig "$@")
+    echo $FUNCNAME temp:${temp} >&2
 
     if [[ $replace == "" ]]; then
-        local tmp=getconfig "$@" | awk -vtype="$type" '$1 == type {pat="^"type"[[:space:]]*"; print gensub(pat, "", 1)}'
-        echo $funcname tmp ${tmp} >&2
-        getconfig "$@" | awk -vtype="$type" '$1 == type {pat="^"type"[[:space:]]*"; print gensub(pat, "", 1)}'
+        echo ------------------------------------------------------------------------------------------ >&2
+        local tmp=myconfig "$@" | awk -vtype="$type" '$1 == type {pat="^"type"[[:space:]]*"; print gensub(pat, "", 1)}'
+        echo $funcname tmp:${tmp} replace:$replace >&2
+        myconfig "$@" | awk -vtype="$type" '$1 == type {pat="^"type"[[:space:]]*"; print gensub(pat, "", 1)}'
     else
-        local tmp=getconfig "$@" | awk -vtype="$type" -vreplace="$replace" '$1 == type {pat="^"type; print gensub(pat, replace, 1)}' 
-        echo $funcname tmp1 ${tmp} >&2
-        getconfig "$@" | awk -vtype="$type" -vreplace="$replace" '$1 == type {pat="^"type; print gensub(pat, replace, 1)}'
+        #echo my_getconfig-item =========type replace  ==== $type $replace >&2
+        #local tmp=myconfig "$@" | awk -vtype="$type" -vreplace="$replace" '$1 == type {pat="^"type; print gensub(pat, replace, 1)}' 
+        #echo my_getconfig-item ====tmp replace======== tmp:${tmp} replace:$replace >&2
+        echo my_getconfig-item @:$@ ------------------------*****------in---------------
+        myconfig "$@" | awk -vtype="$type" -vreplace="$replace" '$1 == type {pat="^"type; print gensub(pat, replace, 1)}'
     fi
 }
 
+
 function getconfig_item_rec()
 {
-    echo getconfig_item_rec param: $@  >&2
+    echo getconfig_item_rec param: $@  >&2 # ? setip echo in
     if [[ $# -lt 3 ]]; then
         echo "Usage: getconfig_item_rec type replace params..."
         return 1
     fi
     
     local num=$(($# - 2))
+    echo $FUNCNAME num:$num
     local result=
     while [[ $num -gt 0 ]]; do
-        result=$(getconfig_item "$1" "$2" "${@:3:$num}")
+        echo =============-------$1 - $2 - ${@:3:$num}----------------- >&2
+        result=$(getconfig_item "$1" "$2" "${@:3:$num}") # sshuser in
+        echo  getconfig_item-rec 00result:$result >&2 # mlbc
+        echo getconfig_item-rec $1 $2 "${@:3:$num}" -- $@ -- $num >&2
         if [[ $result != "" ]]; then
-            printf "getconfig_item_rec --reuslt:$result" >&2
-            echo "$result"
+            echo "getconfig_item_rec 11reuslt:$result" >&2 #11reuslt:mlbc
+            echo "$result" #mlbc 根据in找出来的
             break
         fi
         num=$((num - 1))
     done
-    echo getconfig_item_rec result $result  >&2
+    echo getconfig_item_rec result:$result  >&2
 }
 
 function listconfig()
 {
+    echo "=====$FUNCNAME  @":$@ >&2
     if [[ $# -eq 0 ]]; then
-        echo "=====$funcname=listconfig==0=" >&2
-        get_toolsconfig_content 
-        echo "-----$funcname--listconfig--0---------------"
         get_toolsconfig_content | awk '$0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ && $0 !~ /^[[:space:]]*--/{print}'
     else
-        echo "=====$funcname=listconfig==1=$@" >&2
-        get_toolsconfig_content
-        echo "-----$funcname-listconfig-----1-------------"
+        echo "=====$FUNCNAME=not eq 0" >&2
         get_toolsconfig_content | tac | awk '
         ARGIND==1{
             for (i = 1; i <= NF; ++i)
@@ -1563,6 +1594,98 @@ function listconfig()
     fi
 }
 
+function mylistconfig()
+{
+    echo "=====$FUNCNAME  @":$@ >&2
+    if [[ $# -eq 0 ]]; then
+        echo "=====$FUNCNAME= eq 0" >&2
+        get_toolsconfig_content | awk '$0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ && $0 !~ /^[[:space:]]*--/{print}'
+    else
+        echo "=====$FUNCNAME=not eq 0" >&2
+        get_toolsconfig_content | tac | awk '
+        ARGIND==1{
+            for (i = 1; i <= NF; ++i)
+            {
+                types[$i] = 1;
+                echo $FUNCNAME iiii-$i;
+                print"----00------i"$i;
+            }
+            find = 0;
+            matching = 0;
+            print"----0000------i"$i;
+        }
+        ARGIND==2 && $0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ {
+            print;
+            if ($0 ~ /^[[:space:]]*--/) {
+                if (!matching) {
+                    matching = 1;
+                    find = 0;
+                    print "---- ~-- ---$0 ";
+                }
+                
+                op = gensub(/^[[:space:]]*--/, "", "g", $1);
+                #print "op "op;
+                if (!find && (op in types)) {
+                    find = 1;
+                    print"----op in types----op "op;
+                }
+            } else {
+                matching = 0;
+                print"---- !~-- ---find "find;
+                if (find) {
+                    print;
+                }
+            }
+        }' <(echo "$@") - | tac
+    fi
+}
+
+function mylistconfig1()
+{
+    echo "=====$FUNCNAME  @":$@ >&2
+    if [[ $# -eq 0 ]]; then
+        echo "=====$FUNCNAME= eq 0" >&2
+        get_toolsconfig_content | awk '$0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ && $0 !~ /^[[:space:]]*--/{print}'
+    else
+        echo "=====$FUNCNAME=not eq 0" >&2
+        get_toolsconfig_content | tac | awk '
+            print =$0;
+        ARGIND==1{
+            for (i = 1; i <= NF; ++i)
+            {
+                types[$i] = 1;
+                echo $FUNCNAME iiii-$i;
+                print"----00------i"$i;
+            }
+            find = 0;
+            matching = 0;
+            print"----0000------i"$i;
+        }
+        ARGIND==2 && $0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ {
+            if ($0 ~ /^[[:space:]]*--/) {
+                if (!matching) {
+                    matching = 1;
+                    find = 0;
+                    print "---- ~-- ---$0 ";
+                }
+                
+                op = gensub(/^[[:space:]]*--/, "", "g", $1);
+                #print "op "op;
+                if (!find && (op in types)) {
+                    find = 1;
+                    print"----op in types----op "op;
+                }
+            } else {
+                matching = 0;
+                print"---- !~-- ---find "find;
+                if (find) {
+                    print find!!!!;
+                }
+            }
+        }' <(echo "$@") - | tac
+    fi
+}
+
 function getip()
 {
     if [[ $# -lt 1 ]]; then
@@ -1576,6 +1699,7 @@ function getip()
     fi
     
     local cmd=$(getconfig_item_rec setip echo "$@")
+    echo getip cmd:$cmd >&2
     eval "$cmd"
 }
 
@@ -1753,7 +1877,7 @@ function g()
         while [[ $# -gt 0 ]]; do
             if [[ $1 != "--" ]]; then
                 sshoption=("${sshoption[@]}" "$1")
-                echo g: sshoption $sshoption
+                echo g: sshoption $sshoption >&2
                 shift
             else
                 shift
@@ -1795,8 +1919,9 @@ function g()
     fi
     
     if [[ $user == "" ]]; then
+        echo g: user0000:$sshuser - ${formal_args[@]}
         user=$(getconfig_item_rec sshuser '' "${formal_args[@]}")
-        echo g: user0:$user
+        echo g: user0001:$user
     fi
     if [[ $user == "" ]]; then
         user=$SSH_DEFAULT_USER
@@ -1807,7 +1932,7 @@ function g()
     local goenv=$(getconfig_item setenv '' "${formal_args[@]}")
     local sshoption_from_cfg=$(getconfig_item sshoption '' "${formal_args[@]}")
 
-    echo ==g: ips:$ips goenv:$goenv sshoption_from_cfg:$sshoption_from_cfg
+    echo ==g: ips:$ips goenv:$goenv sshoption_from_cfg:$sshoption_from_cfg # ips:Usage: goenv:mcinner sshoption_from_cfg:
 
     if [[ $goenv == "" ]]; then
         goenv=$SELECTED_ENV
@@ -2198,7 +2323,6 @@ function tscolumn() {
     tstable $'\t' | column -t
 }
 
-#getconfig "in"
 
 function myconfig()
 {
@@ -2251,7 +2375,8 @@ echo $FUNCNAME env: $SELECTED_ENV >&2
                 op = gensub(/^[[:space:]]*--/, "", "g", $1);
         print "myconfig =======230 op:"op
                 if (op ~ /^[a-zA-Z0-9_]+$/) {
-        print "myconfig =======231 find"
+                    print "myconfig =======231 find"
+                
                     print gensub(/^[[:space:]]*--/, "", "g", $0);
                 } else if (match(op, "^[a-zA-Z0-9_]+\\["env"\\]$")) {
         print "myconfig =======232 match"
@@ -2263,4 +2388,189 @@ echo $FUNCNAME env: $SELECTED_ENV >&2
     ' - <(get_toolsconfig_content)
 }
 
-myconfig "in"
+
+#getconfig "in"
+#myconfig "in"
+
+function gg()
+{
+    echo $FUNCNAME[0] $FUNCNAME[1] $LINENO >&2
+
+    if [[ $# -lt 1 ]]; then
+        echo "Usage: $FUNCNAME [[ssh options] --] user@host|host@@user[/next host] ..."
+        mylistconfig setip | cat -n
+        return 1
+    fi
+    
+    local sshoption=()
+    if [[ $1 == "-"* ]]; then
+        while [[ $# -gt 0 ]]; do
+            if [[ $1 != "--" ]]; then
+                sshoption=("${sshoption[@]}" "$1")
+                echo $FUNCNAME[0] $FUNCNAME[1] $LINENO sshoption $sshoption>&2
+                shift
+            else
+                shift
+                break;
+            fi
+        done
+    fi
+
+    local svr=$1    
+    local nextsvr=
+    if [[ $1 =~ .*/.* ]]; then
+        echo  g: 000kkkkk
+        svr=${1%%/*}
+        nextsvr=${1#*/}
+        echo "g:000000x " $FUNCNAME[0] $FUNCNAME[1] $LINENO svr:$svr nextsvr:$nextsvr >&2
+    fi
+    shift
+    
+    local user=
+    if [[ $svr =~ .*@@.* ]]; then
+        echo  g: 00000000
+        user=${svr##*@@}
+        svr=${svr%@@*}
+        echo $FUNCNAME[0] $FUNCNAME[1] $LINENO user:$user svr:$svr >&2
+    elif [[ $svr =~ .*@.* ]]; then
+        echo  g: 0000000011
+        user=${svr%%@*}
+        svr=${svr#*@}
+        echo $FUNCNAME[0] $FUNCNAME[1] $LINENO user:$user svr:$svr >&2
+    fi
+
+    echo myg user:$user svr:$svr #myg user: svr:in
+    
+    
+    local formal_args=()
+    if [[ $nextsvr != "" ]]; then
+        echo g: 222222222
+        formal_args=("$svr")
+    else
+        formal_args=("$svr" "$@") 
+        echo g: 33333333 $svr - $@ - $formal_args # formal_args:in
+    fi
+    
+    if [[ $user == "" ]]; then
+        echo g:formals_args: ${formal_args[@]} # in
+        user=$(getconfig_item_rec sshuser '' "${formal_args[@]}")
+        echo g: user == " user:"$user # user:mlbc
+    fi
+    if [[ $user == "" ]]; then
+        user=$SSH_DEFAULT_USER
+        echo g: user == "" again user:$user
+    fi
+
+    local ips=($(getip "${formal_args[@]}"))
+    local goenv=$(getconfig_item setenv '' "${formal_args[@]}")
+    local sshoption_from_cfg=$(getconfig_item sshoption '' "${formal_args[@]}")
+
+    echo ==myg: ips:$ips goenv:$goenv sshoption_from_cfg:$sshoption_from_cfg #==myg: ips:192.168.60.225 goenv:mcinner sshoption_from_cfg:
+
+    if [[ $goenv == "" ]]; then
+        goenv=$SELECTED_ENV
+    fi
+
+    local cmd="select_env $goenv"
+    if [[ $nextsvr != "" ]]; then
+        cmd="$cmd; g $nextsvr $@"
+    else
+        cmd="$cmd; enter_machine ${formal_args[@]}" # cmd:   select_env mcinner; enter_machine in
+    fi
+
+    if [[ ${#ips[*]} -eq 0 ]]; then
+        echo "no ip available: $svr" >&2
+        return 1
+    fi
+    if [[ ${#ips[*]} -eq 1 ]]; then
+        echo "shellex gg ips: ${ips[*]} $cmd - ${sshoption[@]} - $sshoption_from_cfg" #shellex gg ips: 192.168.60.225 select_env mcinner; enter_machine in -  -
+        myshellex $user@${ips[0]} "$cmd" "${sshoption[@]}" $sshoption_from_cfg #mlbc@192.168.60.225 select_env mcinner; enter_machine in
+        return $?
+    fi
+
+    echo "=======================gggggggggggggggggggg========================================================================================="
+    
+    echo "available ip list: "
+    echo "${ips[@]}" | tr ' ' '\n' | cat -n
+    
+    local index=0
+    until [[ $index -ge 1 && $index -le ${#ips[*]} ]]; do
+        echo -n "Select one ip [1 - ${#ips[*]}]: "
+        read -r index
+    done
+
+    shellex $user@${ips[$((index-1))]} "$cmd" "${sshoption[@]}" $sshoption_from_cfg
+
+}
+
+function myshellex()
+{
+   echo "shellex all param:"$@ 
+    
+    local host=$1
+    local initcmd="$(get_toolsfunc_export_script); exec -la bash bash -l; "
+    local command="$(get_toolsfunc_import_script); "
+    if [[ $# -gt 1 && ${2:0:1} != "-" ]]; then
+        command="$command$2"
+        shift 2
+    else
+        shift 1
+    fi
+    
+    if [[ $host =~ .*@@.* ]]; then
+        host="${host##*@@}@${host%@@*}"
+    fi
+
+:<<!
+
+    local expectcmd=$(cat <<'EOF'
+set getpwdscript [lindex $argv 0];
+set host [lindex $argv 1];
+set arguments [lrange $argv 2 end];
+set command [getenv TOOLSFUNC_EXPECTENV_COMMAND];
+set initcmd [getenv TOOLSFUNC_EXPECTENV_INIT_CMD];
+
+echo "--------------------------myshellex set ----------------------------"
+echo "getpwdscript: " $getpwdscript 
+echo "host:" $host
+echo "arguments:" $arguments
+echo "command:"$command
+echo "initcmd:"$initcmd
+echo "{*}argumnets:"{*}$arguments
+
+set timeout 86400;
+spawn -noecho /usr/bin/ssh -t -o "StrictHostKeyChecking=no" -o "NumberOfPasswordPrompts=1" -q {*}$arguments ${host} $initcmd
+fconfigure $spawn_id -encoding binary;
+fconfigure "exp0" -encoding binary;
+
+expect {
+    -exact "Are you sure you want to continue connecting (yes/no)" {
+        send "yes\n"; 
+        exp_continue; 
+    }
+    -re {([a-zA-Z0-9]*)@(.*)'.*assword:} {
+        feedpasswd $expect_out(1,string) $expect_out(2,string) $getpwdscript;
+        exp_continue; 
+    }
+    "@" {
+        if {$command != ""} {
+            send $command; 
+            send "\n";
+        }
+        interact;
+    }
+    eof {
+        send_error "some error occurs, quit ssh ...\n";
+    }
+}
+puts "current toolsfunc shell level: [getenv TOOLSFUNC_LEVEL]";
+checkret;
+EOF
+)
+    TOOLSFUNC_EXPECTENV_INIT_CMD="$initcmd" TOOLSFUNC_EXPECTENV_COMMAND="$command" /usr/bin/expect -f <(get_expect_commproc; echo "$expectcmd") <(get_sshgetpwd_content) "$host" $SSH_OPT "$@"
+    local ret=$?
+    shellbt
+    return $ret
+    
+!
+}

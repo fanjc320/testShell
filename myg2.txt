@@ -1,0 +1,212 @@
+Usage: myg [[ssh options] --] user@host|host@@user[/next host] ...
+     1		--setcmd ls -l
+     2		--setpath /data/remote_applog/$MFW_APP_NAME
+     3	---- ~-- ---$0 
+     4		--setip[mc] $(get_server_ip mfw.mfwlog-common)
+     5	---- !~-- ---find 0
+     6	logcommon
+     7		--setcmd ls -l
+     8		--setpath /data/remote_applog/$MFW_APP_NAME
+     9	---- ~-- ---$0 
+    10		--setip[mc] $(get_server_ip mfw.mfwlog-mc${1#log})
+    11	---- !~-- ---find 0
+    12	log[[:digit:]]+
+    13		--setcmd ls -l
+    14	---- ~-- ---$0 
+    15		--setpath[mc] /data/app/$MFW_APP_NAME/mlbc.match.${1#m}/MatchServer
+    16	---- !~-- ---find 0
+    17	m[[:digit:]]+|[[:digit:]]+ bin
+    18		--setpath[mc] /data/applog/$MFW_APP_NAME/mlbc.match.${1#m}/MatchServer
+    19	---- ~-- ---$0 
+    20		--setip[mc] $(get_server_ip MatchServer mlbc.match.${1#m})
+    21	---- !~-- ---find 0
+    22	m[[:digit:]]+|[[:digit:]]+ log
+    23	---- !~-- ---find 0
+    24	m[[:digit:]]+|[[:digit:]]+
+    25		--setcmd ls -l
+    26	---- ~-- ---$0 
+    27		--setpath[mc] /data/app/$MFW_APP_NAME/mlbc.battle.${1#b}/BattleServer
+    28	---- !~-- ---find 0
+    29	b[[:digit:]]+|[[:digit:]]+ bin
+    30		--setpath[mc] /data/applog/$MFW_APP_NAME/mlbc.battle.${1#b}/BattleServer
+    31	---- ~-- ---$0 
+    32		--setip[mc] $(get_server_ip BattleServer mlbc.battle.${1#b})
+    33	---- !~-- ---find 0
+    34	b[[:digit:]]+|[[:digit:]]+ log
+    35	---- !~-- ---find 0
+    36	b[[:digit:]]+|[[:digit:]]+
+    37	---- ~-- ---$0 
+    38		--setpath /data/remote_applog/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/ConnServer
+    39	---- !~-- ---find 0
+    40	z[[:digit:]]+|[[:digit:]]+ rconnlog
+    41	---- ~-- ---$0 
+    42		--setpath /data/remote_applog/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/GameServer
+    43	---- !~-- ---find 0
+    44	z[[:digit:]]+|[[:digit:]]+ rlog|rgamelog
+    45		--setcmd ls -l
+    46	---- ~-- ---$0 
+    47		--setpath /data/app/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/ConnServer
+    48	---- !~-- ---find 0
+    49	z[[:digit:]]+|[[:digit:]]+ conn|connbin
+    50		--setcmd ls -l
+    51	---- ~-- ---$0 
+    52		--setpath /data/app/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/GameServer
+    53	---- !~-- ---find 0
+    54	z[[:digit:]]+|[[:digit:]]+ bin|gamebin
+    55	---- ~-- ---$0 
+    56		--setpath /data/applog/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/ConnServer
+    57	z[[:digit:]]+|[[:digit:]]+ connlog
+    58	---- !~-- ---find 1
+    59	z[[:digit:]]+|[[:digit:]]+ connlog
+    60		--setpath /data/applog/$MFW_APP_NAME/$MFW_DIVISION.${1#z}/GameServer
+    61	----op in types----op setip
+    62	---- ~-- ---$0 
+    63		--setip $(get_server_ip GameServer $MFW_DIVISION.${1#z})
+    64	z[[:digit:]]+|[[:digit:]]+ log|gamelog
+    65	---- !~-- ---find 1
+    66	z[[:digit:]]+|[[:digit:]]+ log|gamelog
+    67	z[[:digit:]]+|[[:digit:]]+
+    68	---- !~-- ---find 1
+    69	z[[:digit:]]+|[[:digit:]]+
+    70		--setcmd ls -l
+    71		--setpath /data/app/$MFW_APP_NAME/$2/$1
+    72	----op in types----op setip
+    73	---- ~-- ---$0 
+    74		--setip $(get_server_ip $1 $2)
+    75	[[:alnum:]]+Server [[:alnum:]]+\.[[:alnum:]]+\.[[:alnum:]]+ bin
+    76	---- !~-- ---find 1
+    77	[[:alnum:]]+Server [[:alnum:]]+\.[[:alnum:]]+\.[[:alnum:]]+ bin
+    78	[[:alnum:]]+Server  bin
+    79	---- !~-- ---find 1
+    80	[[:alnum:]]+Server  bin
+    81		--setpath /data/applog/$MFW_APP_NAME/$2/$1
+    82	----op in types----op setip
+    83	---- ~-- ---$0 
+    84		--setip $(get_server_ip $1 $2)
+    85	---- !~-- ---find 0
+    86	[[:alnum:]]+Server [[:alnum:]]+\.[[:alnum:]]+\.[[:alnum:]]+
+    87	---- !~-- ---find 0
+    88	[[:alnum:]]+Server
+    89	---- ~-- ---$0 
+    90	    --setip[ml] 10.116.207.254
+    91	---- !~-- ---find 0
+    92	influx
+    93	    --setcmd[ml] source /data/install/utils.fc
+    94	    --setpath[ml] /data/install
+    95	    --sshuser[ml] root
+    96	---- ~-- ---$0 
+    97		--setip[ml] 10.116.207.214 10.116.207.208 10.116.207.191 10.116.207.224 10.116.207.228 10.117.16.167
+    98	---- !~-- ---find 0
+    99	bk
+   100	---- ~-- ---$0 
+   101		--setip[mc] 10.66.196.169
+   102	---- !~-- ---find 0
+   103	bidb
+   104	---- ~-- ---$0 
+   105		--setip[mc] 10.173.137.68
+   106	---- !~-- ---find 0
+   107	globaldb
+   108	---- ~-- ---$0 
+   109		--setip[mc] 10.173.137.68
+   110	---- !~-- ---find 0
+   111	mfwdb
+   112		--setpath[mc] /data/cdnsrc/mlbc_cdn
+   113	---- ~-- ---$0 
+   114		--setip[mc] 10.66.196.153
+   115	---- !~-- ---find 0
+   116	cdn
+   117		--setpath[mc] /data/www/gm.mlbc.moonton.com
+   118	---- ~-- ---$0 
+   119		--setip[mc] 10.66.196.140
+   120	gm
+   121	---- !~-- ---find 1
+   122	gm
+   123	    --setpath /data/tools/script
+   124	    --setenv mc
+   125	    --sshuser mlbc
+   126	----op in types----op setip
+   127	---- ~-- ---$0 
+   128	    --setip 119.81.5.93
+   129	cc
+   130	---- !~-- ---find 1
+   131	cc
+   132	    --setpath /data/tools/script
+   133	    --setenv mcali
+   134	    --sshuser mlbc
+   135	----op in types----op setip
+   136	---- ~-- ---$0 
+   137	    --setip 47.103.102.47
+   138	ali
+   139	---- !~-- ---find 1
+   140	ali
+   141	    --setpath /data/tools/script
+   142	    --setenv mcinner
+   143	    --sshuser mlbc
+   144	----op in types----op setip
+   145	---- ~-- ---$0 
+   146	    --setip 192.168.60.225
+   147	---- !~-- ---find 0
+   148	in
+   149	---- ~-- ---$0 
+   150	    --setpath $(pwd | awk '{p=$1; q=gensub(/^\/data\/applog\//, "/data/app/", "g", p); if (p==q) q=gensub(/^\/data\/app\//, "/data/applog/", "g", p); print q}')
+   151	-
+   152	---- !~-- ---find 1
+   153	-
+   154	----op in types----op setip
+   155	---- ~-- ---$0 
+   156		--setip $(showip in)
+   157	---- !~-- ---find 0
+   158	\.
+   159	    --setcmd export cc_port=22
+   160	    --setcmd export rel_passwd=mlbc2019
+   161		--setcmd export rel_user=mlbc
+   162		--setcmd export MYSQL_PWD=mlbc2019
+   163		--setcmd export MYSQL_USER=mlbc
+   164		--setcmd export SCP_OPT=
+   165		--setcmd export SSH_OPT=
+   166		--setcmd export SSH_PWD='mlbc2019'
+   167		--setcmd export SSH_DEFAULT_USER=mlbc
+   168		--setcmd export MFW_DIVISION=mlbc.zone
+   169		--setcmd export MFW_GLOBALAPP_NAME=MLBC
+   170		--setcmd export MFW_APP_NAME=MLBC
+   171		--setcmd export MFW_REGISTRY_DB_PORT=3306
+   172	---- ~-- ---$0 
+   173		--setcmd export MFW_REGISTRY_DB_IP="10.173.137.68"
+   174	---- !~-- ---find 0
+   175	:env-mc:
+   176	    --setcmd export cc_port=22
+   177	    --setcmd export rel_passwd=mlbc2019
+   178		--setcmd export rel_user=mlbc
+   179		--setcmd export MYSQL_PWD=mlbc2019
+   180		--setcmd export MYSQL_USER=mlbc
+   181		--setcmd export SCP_OPT=
+   182		--setcmd export SSH_OPT=
+   183		--setcmd export SSH_PWD='mlbc2019'
+   184		--setcmd export SSH_DEFAULT_USER=mlbc
+   185		--setcmd export MFW_DIVISION=mlbc.zone
+   186		--setcmd export MFW_GLOBALAPP_NAME=MLBC
+   187		--setcmd export MFW_APP_NAME=MLBC
+   188		--setcmd export MFW_REGISTRY_DB_PORT=3306
+   189	---- ~-- ---$0 
+   190		--setcmd export MFW_REGISTRY_DB_IP="172.19.179.230"
+   191	---- !~-- ---find 0
+   192	:env-mcali:
+   193	    --setcmd export cc_port=22
+   194	    --setcmd export rel_passwd=mlbc2019
+   195		--setcmd export rel_user=mlbc
+   196		--setcmd export MYSQL_PWD=mlbc2019
+   197		--setcmd export MYSQL_USER=mlbc
+   198		--setcmd export SCP_OPT=
+   199		--setcmd export SSH_OPT=
+   200		--setcmd export SSH_PWD='mlbc2019'
+   201		--setcmd export SSH_DEFAULT_USER=mlbc
+   202		--setcmd export MFW_DIVISION=mlbc.zone
+   203		--setcmd export MFW_GLOBALAPP_NAME=MLBC
+   204		--setcmd export MFW_APP_NAME=MLBC
+   205		--setcmd export MFW_REGISTRY_DB_PORT=3306
+   206	---- ~-- ---$0 
+   207		--setcmd export MFW_REGISTRY_DB_IP="192.168.60.225"
+   208	---- !~-- ---find 0
+   209	:env-mcinner:
+   210	----0000------i
+   211	----00------isetip
