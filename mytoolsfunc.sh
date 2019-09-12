@@ -1387,18 +1387,26 @@ function mysqlex()
     $MYSQL -A -h $ip -P $port -u$MYSQL_USER "$@"
 }
 
-function getconfig()
+# 先执行不匹配 --,找到in :env-mcali: \. - 等 ,然后找到和输入参数(in)匹配的in,然后执行in下面的匹配--的行，输出
+function getconfig()# in:in out:setip 192.168.60.225 \n sshuser mlbc \n setenv mcinner \n setpath /data/tools/script
 {
-    echo "$@" | awk -venv="$SELECTED_ENV" '
+    echo $FUNCNAME params: $1 - $2 - $3 >&2
+
+    #echo test|awk 'ARGIND==1{print "----1----"$0}ARGIND==2{print "---2----"$0}' - <(echo test2) # ----1-----test \n ---2----test2
+
+    echo "$@" |awk -venv="$SELECTED_ENV" '
     ARGIND==1 {
         count = NF;
         matching = 0;
         find = 0;
         for (i = 1; i <= NF; ++i)
+        {
             param[i] = $i;
+            # print "------param[i]:" param[i] # in
+        }
     }
     ARGIND==2 && $0 !~ /^[[:space:]]*#/ && $0 !~ /^[[:space:]]*$/ {
-        if ($0 !~ /^[[:space:]]*--/) {
+        if ($0 !~ /^[[:space:]]*--/) { #不匹配--开头
             if (!matching) {
                 if (find) {
                     exit 0;
@@ -1407,34 +1415,45 @@ function getconfig()
                 find = 0;
             }
             
-            if (!find && NF == count) {
+            if (!find && NF == count) { # NF==1
+                # print  :env-mcinner:  :env-mcali:  :env-mc:  \.  -  in 
+                #print "getconfig===FIND== :"$0 
+
                 find = 1;
                 for (i = 1; i <= count; ++i) {
                     pat = "^("$i")$"
-                    if (!match(param[i], pat)) {
+                    # pat:^(:env-mcinner:)$ pat:^(:env-mcali:)$ pat:^(:env-mc:)$ pat:^(\.)$ pat:^(-)$ pat:^(in)$
+                    #print "getconfig====== param[i]:"param[i] "pat:"pat
+                    if (!match(param[i], pat)) {# param[i]:in pat:^(in)$ 唯一匹配
+                        # print "getconfig !MATCH param[i]:"param[i] "pat:"pat "$0:"$0 # param[i]:in pat:^(:env-mcinner:)$ $0::env-mcinner: pat:^(:env-mcali:)$ $0::env-mcali: pat:^(:env-mc:)$$0::env-mc: pat:^(\.)$$0:\. pat:^(-)$$0:- 
                         find = 0;
                         break;
-                    }
+                    }#else 当参数是in 只有in那一行 match 并且find=1,执行下面的代码逻辑
                 }
             }
-        } else {
+        } else { # 匹配 -- 开头
             matching = 0;
             
             if (find) {
-                op = gensub(/^[[:space:]]*--/, "", "g", $1);
+                #print "getconfig NOT FIND:"$0 # print --setip 192.168.60.225 --sshuser mlbc --setenv mcinner --setpath /data/tools/script
+                op = gensub(/^[[:space:]]*--/, "", "g", $1);# 对$1 比如--setip 去掉空白符，似乎没用
+                #print "fff $1:"$1  " op:"$op # $1:--setip op: --setip 192.168.60.225 $1:--sshuser op:    --sshuser mlbc $1:--setenv op:    --setenv mcinner $1:--setpath op:    --setpath /data/tools/script
+
                 if (op ~ /^[a-zA-Z0-9_]+$/) {
-                    print gensub(/^[[:space:]]*--/, "", "g", $0);
+                    print gensub(/^[[:space:]]*--/, "", "g", $0);# setip 192.168.60.225 sshuser mlbc setenv mcinner setpath /data/tools/script
                 } else if (match(op, "^[a-zA-Z0-9_]+\\["env"\\]$")) {
-                    print gensub(/^[[:space:]]*--([^[]+)[^[:space:]]+/, "\\1", "g", $0);
+                    # print "getconfig ============ggg============:" 
+                    print gensub(/^[[:space:]]*--([^[]+)[^[:space:]]+/, "\\1", "g", $0); # 输入参数为In时,空
                 }
             }
         }
     }
-    ' - <(get_toolsconfig_content)
+    ' - <(get_toolsconfig_content) # - 表示前面echo输入的内容
 }
 
 function getconfig_item()
 {
+    echo $FUNCNAME params:$@ - $1 + $2 - $3 >&2 # sshuser "" in | setip echo in| setenv "" in | sshoption "" in
     if [[ $# -lt 3 ]]; then
         echo "Usage: getconfig_item type replace params..."
         return 1
@@ -1444,16 +1463,19 @@ function getconfig_item()
     local replace=$2
     shift 2
     
+    echo $FUNCNAME type:$type replace:$replace params:$@ >&2
     if [[ $replace == "" ]]; then
+        #echo $FUNCNAME =="" `getconfig "$@"` >&2 #  setip 192.168.60.225 sshuser mlbc setenv mcinner setpath /data/tools/script
         getconfig "$@" | awk -vtype="$type" '$1 == type {pat="^"type"[[:space:]]*"; print gensub(pat, "", 1)}'
     else
+        echo $FUNCNAME !="" `getconfig "$@"` >&2
         getconfig "$@" | awk -vtype="$type" -vreplace="$replace" '$1 == type {pat="^"type; print gensub(pat, replace, 1)}'
     fi
 }
 
-function getconfig_item_rec()
+function getconfig_item_rec() # sshuser "" in -> mlbc | setip echo in| 192.168.30.130
 {
-    echo $FUNCNAME params:$@ >&2 # sshuser in | setip echo in
+    # echo $FUNCNAME params:$@ >&2 # sshuser "" in | setip echo in
     if [[ $# -lt 3 ]]; then
         echo "Usage: getconfig_item_rec type replace params..."
         return 1
@@ -1462,6 +1484,7 @@ function getconfig_item_rec()
     local num=$(($# - 2))
     local result=
     while [[ $num -gt 0 ]]; do
+        # echo $FUNCNAME rrrrr: $1 - $2 - ${@:3:$num} >&2
         result=$(getconfig_item "$1" "$2" "${@:3:$num}")
         if [[ $result != "" ]]; then
             echo "$result"
@@ -1518,6 +1541,7 @@ function getip()
     fi
     
     local cmd=$(getconfig_item_rec setip echo "$@")
+    echo $FUNCNAME cmd:$cmd >&2 # getip cmd:echo 192.168.60.225
     eval "$cmd"
 }
 
@@ -2172,7 +2196,7 @@ function myg()
         user=$SSH_DEFAULT_USER
     fi
 
-    local ips=($(getip "${formal_args[@]}"))
+    local ips=($(getip "${formal_args[@]}")) # getip in
     local goenv=$(getconfig_item setenv '' "${formal_args[@]}")
     local sshoption_from_cfg=$(getconfig_item sshoption '' "${formal_args[@]}")
     if [[ $goenv == "" ]]; then
@@ -2207,6 +2231,7 @@ function myg()
     shellex $user@${ips[$((index-1))]} "$cmd" "${sshoption[@]}" $sshoption_from_cfg
 }
 
+#:<<!
 function myg()
 {
     if [[ $# -lt 1 ]]; then
@@ -2293,4 +2318,4 @@ function myg()
 
     shellex $user@${ips[$((index-1))]} "$cmd" "${sshoption[@]}" $sshoption_from_cfg
 }
-
+#!
